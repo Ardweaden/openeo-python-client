@@ -14,13 +14,14 @@ import re
 import typing
 import warnings
 from builtins import staticmethod
-from typing import List, Dict, Union, Tuple, Optional, Any
+from typing import List, Dict, Union, Tuple, Optional, Any, Iterable
 
 import numpy as np
 import requests
 import shapely.geometry
 import shapely.geometry.base
 from shapely.geometry import Polygon, MultiPolygon, mapping
+from ipyleaflet import Map, TileLayer, basemaps
 
 import openeo
 import openeo.processes
@@ -1828,6 +1829,37 @@ class DataCube(_ProcessGraphAbstraction):
 
     def tiled_viewing_service(self, type: str, **kwargs) -> Service:
         return self._connection.create_service(self.flat_graph(), type=type, **kwargs)
+
+    def preview(
+        self,
+        center: Union[Iterable, None] = None,
+        zoom: Union[int, None] = None,
+        service_type: Union[str, None] = None,
+    ) -> Map:
+        """
+        Creates a service with the process graph.
+
+        :param center: (optional) Map center. Default is (0,0).
+        :param zoom: (optional) Zoom level of the map. Default is 1.
+        :param service_type: (optional) Service type to use. Defaults to one of the available service types.
+
+        :return: ipyleaflet Map object with an OSM base layer and service layer
+        """
+        if service_type is None:
+            service_types = self.connection.list_service_types()
+            service_type = list(service_types)[0]
+
+        service = self.tiled_viewing_service(service_type)
+        service_metadata = service.describe_service()
+
+        m = Map(
+            center=center or (0, 0),
+            zoom=zoom or 1,
+            scroll_wheel_zoom=True,
+            basemap=basemaps.OpenStreetMap.Mapnik,
+        )
+        m.add_layer(TileLayer(url=service_metadata["url"]))
+        return m
 
     def execute_batch(
             self,
