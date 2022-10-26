@@ -1831,35 +1831,52 @@ class DataCube(_ProcessGraphAbstraction):
         return self._connection.create_service(self.flat_graph(), type=type, **kwargs)
 
     def preview(
-        self,
-        center: Union[Iterable, None] = None,
-        zoom: Union[int, None] = None,
-        service_type: Union[str, None] = None,
-    ) -> Map:
-        """
-        Creates a service with the process graph.
+    self,
+    center: Union[Iterable, None] = None,
+    zoom: Union[int, None] = None,
+    service_type: Union[str, None] = None,
+) -> Map:
+    """
+    Creates a service with the process graph.
 
-        :param center: (optional) Map center. Default is (0,0).
-        :param zoom: (optional) Zoom level of the map. Default is 1.
-        :param service_type: (optional) Service type to use. Defaults to one of the available service types.
+    :param center: (optional) Map center. Default is (0,0).
+    :param zoom: (optional) Zoom level of the map. Default is 1.
+    :param service_type: (optional) Service type to use. Defaults to one of the available service types.
 
-        :return: ipyleaflet Map object with an OSM base layer and service layer
-        """
-        if service_type is None:
-            service_types = self.connection.list_service_types()
-            service_type = list(service_types)[0]
+    :return: ipyleaflet Map object with an OSM base layer and service layer
+    """
+    if service_type is None:
+        service_types = self.connection.list_service_types()
+        service_type = list(service_types)[0]
 
-        service = self.tiled_viewing_service(service_type)
-        service_metadata = service.describe_service()
+    service = self.tiled_viewing_service(service_type)
+    service_metadata = service.describe_service()
 
-        m = Map(
-            center=center or (0, 0),
-            zoom=zoom or 1,
-            scroll_wheel_zoom=True,
-            basemap=basemaps.OpenStreetMap.Mapnik,
-        )
-        m.add_layer(TileLayer(url=service_metadata["url"]))
-        return m
+    m = Map(
+        center=center or (0, 0),
+        zoom=zoom or 1,
+        scroll_wheel_zoom=True,
+        basemap=basemaps.OpenStreetMap.Mapnik,
+    )
+    m.add_layer(TileLayer(url=service_metadata["url"]))
+
+    if center is None and zoom is None:
+        pg = self.flat_graph()
+        for node in pg:
+            if pg[node]["process_id"] == "load_collection":
+                if "spatial_extent" in pg[node]["arguments"] and all(
+                    cd
+                    for cd in pg[node]["arguments"]["spatial_extent"]
+                    for cd in ["east", "west", "south", "north"]
+                ):
+                    spatial_extent = pg[node]["arguments"]["spatial_extent"]
+                    m.fit_bounds(
+                        [
+                            [spatial_extent["south"], spatial_extent["west"]],
+                            [spatial_extent["north"], spatial_extent["east"]],
+                        ]
+                    )
+    return m
 
     def execute_batch(
             self,
