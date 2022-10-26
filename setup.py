@@ -47,6 +47,7 @@ setup(name=name,
           'xarray>=0.12.3',
           'pandas>0.20.0',
           'deprecated>=1.2.12'
+          'ipyleaflet>=0.17.2'
       ],
       extras_require={
           "dev": tests_require + [

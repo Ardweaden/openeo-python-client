@@ -21,6 +21,7 @@ import requests
 import shapely.geometry
 import shapely.geometry.base
 from shapely.geometry import Polygon, MultiPolygon, mapping
+from ipyleaflet import Map, TileLayer
 
 import openeo
 import openeo.processes
@@ -1828,6 +1829,14 @@ class DataCube(_ProcessGraphAbstraction):
 
     def tiled_viewing_service(self, type: str, **kwargs) -> Service:
         return self._connection.create_service(self.flat_graph(), type=type, **kwargs)
+
+    def preview(self):
+        service = self.tiled_viewing_service("XYZ")
+        service_metadata = service.describe_service()
+        m = Map(scroll_wheel_zoom=True, basemap=TileLayer(url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"))
+        service_layer = TileLayer(url=service_metadata["url"])
+        m.add_layer(service_layer)
+        display(m)
 
     def execute_batch(
             self,
