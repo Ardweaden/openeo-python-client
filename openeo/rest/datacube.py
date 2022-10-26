@@ -1833,7 +1833,7 @@ class DataCube(_ProcessGraphAbstraction):
     def preview(self):
         service = self.tiled_viewing_service("XYZ")
         service_metadata = service.describe_service()
-        m = Map(scroll_wheel_zoom=True, basemap=TileLayer(url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"))
+        m = Map(center=(52.204793, 360.121558),zoom=4,scroll_wheel_zoom=True, basemap=TileLayer(url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"))
         service_layer = TileLayer(url=service_metadata["url"])
         m.add_layer(service_layer)
         display(m)
