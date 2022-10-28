@@ -1835,7 +1835,7 @@ class DataCube(_ProcessGraphAbstraction):
         center: Union[Iterable, None] = None,
         zoom: Union[int, None] = None,
         service_type: Union[str, None] = None,
-    ) -> Map:
+    ) -> Tuple[Map, Service]:
         """
         Creates a service with the process graph.
 
@@ -1843,7 +1843,7 @@ class DataCube(_ProcessGraphAbstraction):
         :param zoom: (optional) Zoom level of the map. Default is 1.
         :param service_type: (optional) Service type to use. Defaults to one of the available service types.
 
-        :return: ipyleaflet Map object with an OSM base layer and service layer
+        :return: ipyleaflet Map object and the displayed Service
         """
         if service_type is None:
             service_types = self.connection.list_service_types()
@@ -1878,7 +1878,12 @@ class DataCube(_ProcessGraphAbstraction):
                             ]
                         )
                         service_layer.redraw()
-        return m
+        try:
+            display(m)
+        except:
+            pass
+
+        return m, service
 
     def execute_batch(
             self,
