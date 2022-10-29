@@ -1830,24 +1830,34 @@ class DataCube(_ProcessGraphAbstraction):
     def tiled_viewing_service(self, type: str, **kwargs) -> Service:
         return self._connection.create_service(self.flat_graph(), type=type, **kwargs)
 
+    def _get_spatial_extent_from_load_collection(self):
+        pg = self.flat_graph()
+        for node in pg:
+            if pg[node]["process_id"] == "load_collection":
+                if "spatial_extent" in pg[node]["arguments"] and all(
+                    cd
+                    for cd in pg[node]["arguments"]["spatial_extent"]
+                    for cd in ["east", "west", "south", "north"]
+                ):
+                    return pg[node]["arguments"]["spatial_extent"]
+        return None
+
+
     def preview(
         self,
         center: Union[Iterable, None] = None,
         zoom: Union[int, None] = None,
-        service_type: Union[str, None] = None,
     ) -> Tuple[Map, Service]:
         """
-        Creates a service with the process graph.
+        Creates a service with the process graph and displays a map widget. Only supports XYZ.
 
         :param center: (optional) Map center. Default is (0,0).
         :param zoom: (optional) Zoom level of the map. Default is 1.
-        :param service_type: (optional) Service type to use. Defaults to one of the available service types.
 
         :return: ipyleaflet Map object and the displayed Service
         """
-        if service_type is None:
-            service_types = self.connection.list_service_types()
-            service_type = list(service_types)[0]
+        if "XYZ" not in self.connection.list_service_types():
+            raise OpenEoClientException(f"Backend does not support service type 'XYZ'.")
 
         service = self.tiled_viewing_service(service_type)
         service_metadata = service.describe_service()
@@ -1862,28 +1872,23 @@ class DataCube(_ProcessGraphAbstraction):
         m.add_layer(service_layer)
 
         if center is None and zoom is None:
-            pg = self.flat_graph()
-            for node in pg:
-                if pg[node]["process_id"] == "load_collection":
-                    if "spatial_extent" in pg[node]["arguments"] and all(
-                        cd
-                        for cd in pg[node]["arguments"]["spatial_extent"]
-                        for cd in ["east", "west", "south", "north"]
-                    ):
-                        spatial_extent = pg[node]["arguments"]["spatial_extent"]
-                        m.fit_bounds(
-                            [
-                                [spatial_extent["south"], spatial_extent["west"]],
-                                [spatial_extent["north"], spatial_extent["east"]],
-                            ]
-                        )
-                        service_layer.redraw()
+            spatial_extent = self._get_spatial_extent_from_load_collection()
+            if spatial_extent is not None:
+                m.fit_bounds(
+                    [
+                        [spatial_extent["south"], spatial_extent["west"]],
+                        [spatial_extent["north"], spatial_extent["east"]],
+                    ]
+                )
+
         try:
+            # display is only available in iPython
             display(m)
         except:
             pass
 
         return m, service
+
 
     def execute_batch(
             self,
